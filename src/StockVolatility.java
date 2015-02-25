@@ -1,24 +1,10 @@
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 
 public class StockVolatility {
 	
@@ -33,7 +19,7 @@ public class StockVolatility {
 	 * 
 	 * @author joepeacock
 	 */
-	public static class Map extends Mapper<LongWritable, Text, Text, Text>{
+	public static class Map extends Mapper<Object, Text, Text, Text>{
 		
 		// Key
 		private Text stockName = new Text(); 
@@ -42,7 +28,7 @@ public class StockVolatility {
 		private Text date = new Text();
 		private Text closePrice = new Text();
 
-		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 			/* 
 			 * Example Row:
 			 * 
@@ -56,55 +42,106 @@ public class StockVolatility {
 			// Ignore first row of data with titles, otherwise map it.
 			if (!columns[0].equals("Date") && !columns[6].equals("Adj Close")) {
 
-                date.set(columns[0].split("-")[1]); 		// columns[0] = Date
+				
+				String[] splitDate = columns[0].split("-");
+
+                date.set(columns[0]); 		// columns[0] = Date
                 closePrice.set(columns[6]); 		       	// columns[6] = Adjusted Close
 
                 Text stockValue = new Text(date.toString() + "," + closePrice.toString()); 
                 
                 // Now we grab the file name
-                String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
-                stockName.set(fileName);
+                String nameParse = ((FileSplit) context.getInputSplit()).getPath().getName();
+                stockName.set(nameParse);
 
                 // Finally output
 				context.write(stockName, stockValue);
 			}
 		}
 	}
+	
+	/**
+	 * The Reducer function that completes two main tasks.
+	 * 
+	 * 1. Calculate the monthly return per key (stock)
+	 * 
+	 * The first run through we iterate through each value. The input is already sorted
+	 * so as we pass through the dates, we keep track of when the months change. When this happens 
+	 * we run a calculation on the first day after the last month change, and the last value iterated over.
+	 * 
+	 * 2. Calculate the volatility of the stock
+	 * 
+	 * Run the calculateVolatility() function outlined below, just runs the equation defined
+	 * by volatility. It takes a list of monthly returns for an individual stock, and the number
+	 * of months that are calculated. 
+	 * 
+	 * @author joepeacock
+	 *
+	 */
+	public static class Reduce extends Reducer<Text, Text, Text, DoubleWritable> {
 
-	public static class Reduce extends Reducer<Text, Text, Text, Text> {
-
-		private Text stockName = new Text();
-
-		private ArrayList<Float> monthlyReturn = new ArrayList<Float>();
-		private String previousMonth = "";
-		private float numOfMonths = 0;
-
-		private float startPrice = 0;
-		private float endPrice = 0;
-		
-		private Text result = new Text();
-
-		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+		/*
+         * Generate the volatility. The equation is as follows:
+         * 
+         *	  x_i         = Invidividual Monthly Return 
+         * 1. x_bar       = sum(xi)/numOfMonth -> sum is over all values from 0 to N in monthlyReturn
+         * 2. x_sum       = sum( (xi-xbar)^2 ) from 0 to N in monthlyReturn
+         * 3. volatility = sqrt( (1/numOfMonth-1)*xsum )
+         * 
+         */
+		private double calculateVolatility(ArrayList<Float> monthlyReturn, float numOfMonths) {
 			
+			
+			// 1.
+			float xiSum = 0;
+			for (int i =0; i<monthlyReturn.size(); i++) {
+				xiSum += monthlyReturn.get(i);
+			}
+			float xBar = xiSum/numOfMonths;
+
+			// 2.
+			double xSum = 0;
+			for (int i=0; i<monthlyReturn.size(); i++) {
+				xSum += Math.pow(monthlyReturn.get(i) - xBar, 2);
+			}
+			
+			// 3.
+			double root = (1/(numOfMonths-1))*xSum;
+			double volatility = Math.sqrt(root);
+
+			return volatility;
+		}
+		
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+
+			// Setup our initial variables
+			ArrayList<Float> monthlyReturn = new ArrayList<Float>();
+			Text stockName = new Text();
+
+			String previousMonth = "";
+			float numOfMonths = 0;
+
+			float startPrice = 0;
+			float endPrice = 0;
+
 			// Set the Stock Name as the Key
 			stockName.set(key);
 
+			// Now we iterate on our values.
 			for (Text val: values) {
-				
 				System.out.println(val);
 				
-				// Parse date & adjusted close
+				// Parse date & adjusted close value
 				String[] stockValues = val.toString().split(",");
-//				if (stockValues.length < 2) { 
-//					continue;
-//				}
+				if (stockValues.length < 2) { 
+					continue;
+				}
 
 				String month = stockValues[0];
 				String priceInput = stockValues[1];
-				
 				float closingPrice = Float.parseFloat(priceInput);
 				
-				// First time around setup.
+				// First iteration of the loop we set our default values.
 				if (startPrice == 0 && previousMonth.equals("")) {
 					startPrice = closingPrice;
 					previousMonth = month;
@@ -128,58 +165,17 @@ public class StockVolatility {
 				endPrice = closingPrice;
 			}
 
-			// Add on the last month value
+			// Finally, we calculate our last value.
 			numOfMonths += 1;
 			monthlyReturn.add((endPrice - startPrice)/startPrice);
-
-			/*
-			 * Generate the volatility. The equation is as follows:
-			 * 
-			 * 1. xbar       = sum(xi)/numOfMonth -> sum is over all values from 0 to N in monthlyReturn
-			 * 2. xsum       = sum( (xi-xbar)^2 ) from 0 to N in monthlyReturn
-			 * 3. volatility = sqrt( (1/numOfMonth-1)*xsum )
-			 */
 			
-			// 1.
-			float xiSum = 0;
-			for (int i =0; i<monthlyReturn.size(); i++) {
-				xiSum += monthlyReturn.get(i);
+			// If the volatility is 0 just dont include it.
+			double output = calculateVolatility(monthlyReturn, numOfMonths);
+			if (output > 0 && !Double.isNaN(output)) {
+				context.write(stockName, new DoubleWritable(output));
 			}
-			float xBar = xiSum/numOfMonths;
-
-			// 2.
-			double xSum = 0;
-			for (int i=0; i<monthlyReturn.size(); i++) {
-				xSum += Math.pow(monthlyReturn.get(i) - xBar, 2);
-			}
-			
-			// 3.
-			double root = (1/(numOfMonths-1))*xSum;
-			result.set(Double.toString(Math.sqrt(root)));
-			
-			System.out.println("OUTPUT: " + stockName.toString() + " " + result.toString());
-			context.write(stockName, result);
 		}
 	}
 
-	public static void main(String[] args) throws Exception {
-		Job job = Job.getInstance();
-        job.setJarByClass(StockVolatility.class);
-
-        job.setMapperClass(Map.class);
-        job.setCombinerClass(Reduce.class);
-        job.setReducerClass(Reduce.class);
-        
-
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
-
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-        job.waitForCompletion(true);
-    }
+	
 }
