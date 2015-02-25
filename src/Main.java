@@ -15,13 +15,14 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 
 		long start = new Date().getTime();		
-		Configuration conf = new Configuration();
+//		Configuration conf = new Configuration();
 		//String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 		//Job job = new Job(conf, "MatrixMul_phase1");
 		//Job job2 = new Job(conf, "MatrixMul_phase2");
 		
 	     Job job = Job.getInstance();
 	     job.setJarByClass(StockVolatility.class);
+
 	     Job job2 = Job.getInstance();
 	     job2.setJarByClass(StockSort.class);
 		 
@@ -32,11 +33,15 @@ public class Main {
 		job.setMapperClass(StockVolatility.Map.class);
 		job.setReducerClass(StockVolatility.Reduce.class);
 		
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Text.class);
+		job.setMapOutputValueClass(DoubleWritable.class);
+
 //		job.setNumReduceTasks(5);// decide how many output file
-		int NOfReducer1 = Integer.valueOf(args[1]);	
-		job.setNumReduceTasks(NOfReducer1);
+//		int NOfReducer1 = Integer.valueOf(args[1]);	
+//		job.setNumReduceTasks(NOfReducer1);
 	
 //		job.setPartitionerClass(MatrixMul_phase1.CustomPartitioner.class);
 
@@ -47,11 +52,21 @@ public class Main {
 		job2.setMapOutputKeyClass(Text.class);
 		job2.setMapOutputValueClass(Text.class);
 //		job2.setNumReduceTasks(5);
-		int NOfReducer2 = Integer.valueOf(args[1]);
-		job2.setNumReduceTasks(NOfReducer2);
+//		int NOfReducer2 = Integer.valueOf(args[1]);
+//		job2.setNumReduceTasks(NOfReducer2);
 		
+		System.out.println("JAVA ARG 0: " + args[0]);
+		System.out.println("JAVA ARG 0 PATH: " + new Path(args[0]));
+		
+		System.out.println("JAVA ARG 1: " + args[1]);
+		System.out.println("JAVA ARG 1 PATH: " + new Path(args[1]));
+		
+		// args[0] = small/AAPL.csv
+		// Input file in HDFS = data/AAPL.csv
+		// So we split on slash and just use AAPL.csv here.
+		String fileName = "/data/" + args[0].split("/")[1];
 
-		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileInputFormat.addInputPath(job, new Path(fileName));
 //		FileOutputFormat.setOutputPath(job, new Path("temp-1"));
 //		FileInputFormat.addInputPath(job2, new Path("temp-1"));
 //		FileOutputFormat.setOutputPath(job2, new Path(otherArgs[1]));
