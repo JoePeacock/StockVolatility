@@ -15,11 +15,11 @@ public class Main {
 
 		long start = new Date().getTime();		
 
-	     Job calculate= Job.getInstance();
-	     calculate.setJarByClass(StockVolatility.class);
+	    Job group = Job.getInstance();
+	    group.setJarByClass(GroupStocks.class);
 
-	     Job job2 = Job.getInstance();
-	     job2.setJarByClass(StockSort.class);
+	    Job job2 = Job.getInstance();
+	    job2.setJarByClass(SortStocks.class);
 
 		System.out.println("\n=============== Stock Volatility - Start ===============\n");
 
@@ -27,25 +27,34 @@ public class Main {
 		Path tempFile = new Path("temp_file");
 		
 		/*
-		 * Run StockVolatility Class Job
+		 * Run GroupStocks Job
 		 */
-		calculate.setMapperClass(StockVolatility.Map.class);
-        calculate.setReducerClass(StockVolatility.Reduce.class);
+		group.setMapperClass(GroupStocks.Map.class);
+        group.setReducerClass(GroupStocks.Reduce.class);
         
-        calculate.setOutputKeyClass(Text.class);
-        calculate.setOutputValueClass(DoubleWritable.class);
+        group.setOutputKeyClass(Text.class);
+        group.setOutputValueClass(DoubleWritable.class);
 
-        calculate.setMapOutputKeyClass(Text.class);
-        calculate.setMapOutputValueClass(Text.class);
+        group.setMapOutputKeyClass(Text.class);
+        group.setMapOutputValueClass(Text.class);
 
-        calculate.setInputFormatClass(TextInputFormat.class);
-        calculate.setOutputFormatClass(TextOutputFormat.class);
+        group.setInputFormatClass(TextInputFormat.class);
+        group.setOutputFormatClass(TextOutputFormat.class);
 
-        FileInputFormat.addInputPath(calculate, fileName);
-        FileOutputFormat.setOutputPath(calculate, new Path("Output_"+args[1]));
+        FileInputFormat.addInputPath(group, fileName);
+        FileOutputFormat.setOutputPath(group, tempFile);
+
+		group.waitForCompletion(true);
+
+		if (true) {
+			long end = new Date().getTime();
+			System.out.println("\nExecution Time: " + (end-start)/1000 + " seconds\n");
+		}
+
+		System.out.println("\n=============== Stock Volatility - End ===============\n");		
+
 //		FileOutputFormat.setOutputPath(calculate, tempFile);
 
-		calculate.waitForCompletion(true);
 
 //		/*
 //		 * Run StockSort Class Job
@@ -71,11 +80,6 @@ public class Main {
 //		/*
 //		 * Calculate the Execution Time of the program when job2 finishes.
 //		 */
-		if (true) {
-			long end = new Date().getTime();
-			System.out.println("\nExecution Time: " + (end-start)/1000 + " seconds\n");
-		}
-
-		System.out.println("\n=============== Stock Volatility - End ===============\n");		
+		
 	}
 }
