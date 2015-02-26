@@ -1,6 +1,5 @@
 import java.util.Date;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -15,76 +14,68 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 
 		long start = new Date().getTime();		
-//		Configuration conf = new Configuration();
-		//String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-		//Job job = new Job(conf, "MatrixMul_phase1");
-		//Job job2 = new Job(conf, "MatrixMul_phase2");
-		
-	     Job job = Job.getInstance();
-	     job.setJarByClass(StockVolatility.class);
+
+	     Job calculate= Job.getInstance();
+	     calculate.setJarByClass(StockVolatility.class);
 
 	     Job job2 = Job.getInstance();
 	     job2.setJarByClass(StockSort.class);
-		 
 
-		System.out.println("\n**********Matrix_Multiplication_Hadoop-> Start**********\n");
+		System.out.println("\n=============== Stock Volatility - Start ===============\n");
 
-		job.setJarByClass(StockVolatility.class);
-		job.setMapperClass(StockVolatility.Map.class);
-		job.setReducerClass(StockVolatility.Reduce.class);
+		Path fileName = new Path("/data/" + args[0].split("/")[1]);
+		Path tempFile = new Path("temp_file");
 		
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		/*
+		 * Run StockVolatility Class Job
+		 */
+		calculate.setMapperClass(StockVolatility.Map.class);
+        calculate.setReducerClass(StockVolatility.Reduce.class);
+        
+        calculate.setOutputKeyClass(Text.class);
+        calculate.setOutputValueClass(DoubleWritable.class);
 
-		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(DoubleWritable.class);
+        calculate.setMapOutputKeyClass(Text.class);
+        calculate.setMapOutputValueClass(Text.class);
 
-//		job.setNumReduceTasks(5);// decide how many output file
-//		int NOfReducer1 = Integer.valueOf(args[1]);	
-//		job.setNumReduceTasks(NOfReducer1);
-	
-//		job.setPartitionerClass(MatrixMul_phase1.CustomPartitioner.class);
+        calculate.setInputFormatClass(TextInputFormat.class);
+        calculate.setOutputFormatClass(TextOutputFormat.class);
 
-		job2.setJarByClass(StockSort.class);
-		job2.setMapperClass(StockSort.Map.class);
-		job2.setReducerClass(StockSort.Reduce.class);
+        FileInputFormat.addInputPath(calculate, fileName);
+        FileOutputFormat.setOutputPath(calculate, new Path("Output_"+args[1]));
+//		FileOutputFormat.setOutputPath(calculate, tempFile);
 
-		job2.setMapOutputKeyClass(Text.class);
-		job2.setMapOutputValueClass(Text.class);
-//		job2.setNumReduceTasks(5);
-//		int NOfReducer2 = Integer.valueOf(args[1]);
-//		job2.setNumReduceTasks(NOfReducer2);
-		
-		System.out.println("JAVA ARG 0: " + args[0]);
-		System.out.println("JAVA ARG 0 PATH: " + new Path(args[0]));
-		
-		System.out.println("JAVA ARG 1: " + args[1]);
-		System.out.println("JAVA ARG 1 PATH: " + new Path(args[1]));
-		
-		// args[0] = small/AAPL.csv
-		// Input file in HDFS = data/AAPL.csv
-		// So we split on slash and just use AAPL.csv here.
-		String fileName = "/data/" + args[0].split("/")[1];
+		calculate.waitForCompletion(true);
 
-		FileInputFormat.addInputPath(job, new Path(fileName));
-//		FileOutputFormat.setOutputPath(job, new Path("temp-1"));
-//		FileInputFormat.addInputPath(job2, new Path("temp-1"));
-//		FileOutputFormat.setOutputPath(job2, new Path(otherArgs[1]));
-		
-		FileOutputFormat.setOutputPath(job, new Path("Inter_"+args[1]));
-		
-		FileInputFormat.addInputPath(job2, new Path("Inter_"+args[1]));
-		FileOutputFormat.setOutputPath(job2, new Path("Output_"+args[1]));
-		
-		job.waitForCompletion(true);
-//		boolean status = job.waitForCompletion(true);
-		boolean status = job2.waitForCompletion(true);
-		if (status == true) {
+//		/*
+//		 * Run StockSort Class Job
+//		 */
+//		job2.setJarByClass(StockSort.class);
+//		job2.setMapperClass(StockSort.Map.class);
+//		job2.setReducerClass(StockSort.Reduce.class);
+//
+//		job2.setOutputKeyClass(Text.class);
+//		job2.setOutputValueClass(DoubleWritable.class);
+//
+//		job2.setMapOutputKeyClass(Text.class);
+//		job2.setMapOutputValueClass(Text.class);
+//
+//		job2.setInputFormatClass(TextInputFormat.class);
+//		job2.setOutputFormatClass(TextOutputFormat.class);
+//
+//		FileInputFormat.addInputPath(job2, tempFile);
+//		FileOutputFormat.setOutputPath(job2, new Path("Output_"+args[1]));
+//		
+//		boolean status = job2.waitForCompletion(true);
+//		
+//		/*
+//		 * Calculate the Execution Time of the program when job2 finishes.
+//		 */
+		if (true) {
 			long end = new Date().getTime();
-//			System.out.println("\nJob took " + (end - start) + "milliseconds\n");
-			System.out.println("\nJob took " + (end-start)/1000 + "seconds\n");
+			System.out.println("\nExecution Time: " + (end-start)/1000 + " seconds\n");
 		}
-		System.out.println("\n**********Matrix_Multiplication_Hadoop-> End**********\n");		
-//		System.exit(job2.waitForCompletion(true) ? 0 : 1);
+
+		System.out.println("\n=============== Stock Volatility - End ===============\n");		
 	}
 }

@@ -41,11 +41,9 @@ public class StockVolatility {
 			
 			// Ignore first row of data with titles, otherwise map it.
 			if (!columns[0].equals("Date") && !columns[6].equals("Adj Close")) {
-
-				
 				String[] splitDate = columns[0].split("-");
 
-                date.set(columns[0]); 		// columns[0] = Date
+                date.set(columns[0]); 						// columns[0] = Date
                 closePrice.set(columns[6]); 		       	// columns[6] = Adjusted Close
 
                 Text stockValue = new Text(date.toString() + "," + closePrice.toString()); 
@@ -90,8 +88,6 @@ public class StockVolatility {
          * 
          */
 		private double calculateVolatility(ArrayList<Float> monthlyReturn, float numOfMonths) {
-			
-			
 			// 1.
 			float xiSum = 0;
 			for (int i =0; i<monthlyReturn.size(); i++) {
@@ -171,6 +167,7 @@ public class StockVolatility {
 			
 			// If the volatility is 0 just dont include it.
 			double output = calculateVolatility(monthlyReturn, numOfMonths);
+			System.out.println(output);
 			if (output > 0 && !Double.isNaN(output)) {
 				context.write(stockName, new DoubleWritable(output));
 			}
