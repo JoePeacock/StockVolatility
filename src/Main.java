@@ -15,16 +15,23 @@ public class Main {
 
 		long start = new Date().getTime();		
 
+		Path fileName = new Path("/data/" + args[0].split("/")[1]);
+		Path tempFile1 = new Path("/temp/temp1");
+		Path tempFile2 = new Path("/temp/temp2");
+		
+		/*
+		 * Setup our Jobs
+		 */
 	    Job group = Job.getInstance();
 	    group.setJarByClass(GroupStocks.class);
 
-	    Job job2 = Job.getInstance();
-	    job2.setJarByClass(SortStocks.class);
+	    Job calculate = Job.getInstance();
+	    calculate.setJarByClass(CalculateVolatility.class);
+	    
+	    Job sort = Job.getInstance();
+	    calculate.setJarByClass(SortStocks.class);
 
 		System.out.println("\n=============== Stock Volatility - Start ===============\n");
-
-		Path fileName = new Path("/data/" + args[0].split("/")[1]);
-		Path tempFile = new Path("temp_file");
 		
 		/*
 		 * Run GroupStocks Job
@@ -42,44 +49,54 @@ public class Main {
         group.setOutputFormatClass(TextOutputFormat.class);
 
         FileInputFormat.addInputPath(group, fileName);
-        FileOutputFormat.setOutputPath(group, tempFile);
+        FileOutputFormat.setOutputPath(group, tempFile1);
 
 		group.waitForCompletion(true);
+		
+	    /*
+		 * Run CalculateVolatility Job
+		 */
+		calculate.setJarByClass(CalculateVolatility.class);
+		calculate.setMapperClass(CalculateVolatility.Map.class);
+		calculate.setReducerClass(CalculateVolatility.Reduce.class);
 
-		if (true) {
-			long end = new Date().getTime();
-			System.out.println("\nExecution Time: " + (end-start)/1000 + " seconds\n");
-		}
+		calculate.setOutputKeyClass(Text.class);
+		calculate.setOutputValueClass(DoubleWritable.class);
+
+		calculate.setMapOutputKeyClass(Text.class);
+		calculate.setMapOutputValueClass(DoubleWritable.class);
+
+		calculate.setInputFormatClass(TextInputFormat.class);
+		calculate.setOutputFormatClass(TextOutputFormat.class);
+
+		FileInputFormat.addInputPath(calculate, tempFile1);
+		FileOutputFormat.setOutputPath(calculate, tempFile2);
+		
+		calculate.waitForCompletion(true);	
+		
+		/*
+		 * Run Sort Job
+		 */
+		sort.setMapperClass(GroupStocks.Map.class);
+        sort.setReducerClass(GroupStocks.Reduce.class);
+        
+        sort.setOutputKeyClass(Text.class);
+        sort.setOutputValueClass(DoubleWritable.class);
+
+        sort.setMapOutputKeyClass(Text.class);
+        sort.setMapOutputValueClass(Text.class);
+
+        sort.setInputFormatClass(TextInputFormat.class);
+        sort.setOutputFormatClass(TextOutputFormat.class);
+
+        FileInputFormat.addInputPath(sort, tempFile2);
+        FileOutputFormat.setOutputPath(sort, new Path("Output_"+args[1]));
+
+		sort.waitForCompletion(true);
 
 		System.out.println("\n=============== Stock Volatility - End ===============\n");		
 
-//		FileOutputFormat.setOutputPath(calculate, tempFile);
-
-
-//		/*
-//		 * Run StockSort Class Job
-//		 */
-//		job2.setJarByClass(StockSort.class);
-//		job2.setMapperClass(StockSort.Map.class);
-//		job2.setReducerClass(StockSort.Reduce.class);
-//
-//		job2.setOutputKeyClass(Text.class);
-//		job2.setOutputValueClass(DoubleWritable.class);
-//
-//		job2.setMapOutputKeyClass(Text.class);
-//		job2.setMapOutputValueClass(Text.class);
-//
-//		job2.setInputFormatClass(TextInputFormat.class);
-//		job2.setOutputFormatClass(TextOutputFormat.class);
-//
-//		FileInputFormat.addInputPath(job2, tempFile);
-//		FileOutputFormat.setOutputPath(job2, new Path("Output_"+args[1]));
-//		
-//		boolean status = job2.waitForCompletion(true);
-//		
-//		/*
-//		 * Calculate the Execution Time of the program when job2 finishes.
-//		 */
-		
+		long end = new Date().getTime();
+        System.out.println("\nExecution Time: " + (end-start)/1000 + " seconds\n");
 	}
 }

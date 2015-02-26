@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --partition=debug
 #SBATCH --time=00:15:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=8
 ##SBATCH --constraint=CPU-L5520
 #SBATCH --exclusive
 ##SBATCH --mem=24000
 ##SBATCH --mem-per-cpu=4000
-#SBATCH --job-name=StockVolatility
-#SBATCH --output=logs.out
+#SBATCH --job-name="test_hadoop"
+#SBATCH --output=output.txt
 #SBATCH --mail-user=japeacoc@buffalo.edu
 #SBATCH --mail-type=ALL
 ##SBATCH --requeue
@@ -52,25 +52,34 @@ $MH_HOME/bin/myhadoop-configure.sh
 echo "-------Start hdfs and yarn ---"
 $HADOOP_HOME/sbin/start-all.sh
 #### Format HDFS, if this is the first time or not a persistent instance
+
 echo "-------Show Report ---"
 $HADOOP_HOME/bin/hadoop dfsadmin -report
+
 echo "-------make directory ---"
 $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -mkdir /data
+
 echo "-------copy file to hdfs ---"
-$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -put $DATA_PATH /data/
+export FILENAME=/gpfs/courses/cse587/spring2015/data/hw1/$1
+$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -put $FILENAME /data/
+
 echo "-------list directory ---"
 $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -ls /data
-echo "-------do wordcount of file ---"
-$HADOOP_HOME/bin/hadoop --config $HADOOP_CONF_DIR jar $EXEC_JAR $EXEC_CLASS /data $JOB_NAME-output
+
+echo "-------Do Volatility Calculation on Files ---"
+export HFILE=/data/$1
+$HADOOP_HOME/bin/hadoop --config $HADOOP_CONF_DIR jar StockVolatility.jar Main $1 $2
+
 echo "-------list output ---"
-$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -ls $JOB_NAME-output
-echo "-------Get outout ---"
-$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -get $JOB_NAME-output ./output
+export OFILE=Output_$2
+$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -ls $OFILE
+
+echo "-------Get output ---"
+export OUTPUT=./$OFILE
+$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR dfs -get $OFILE $OUTPUT
 
 echo "-------Stop hdfs and yarn ---"
 $HADOOP_HOME/sbin/stop-all.sh
 
 #### Clean up the working directories after job completion
 $MH_HOME/bin/myhadoop-cleanup.sh
-
-

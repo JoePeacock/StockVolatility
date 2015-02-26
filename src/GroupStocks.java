@@ -50,8 +50,6 @@ public class GroupStocks {
 				stockKey.set(stockName + "," + month + "-" + year);
 				stockValue.set(day + "," + closePrice);
 				
-				System.out.println(stockKey.toString() + " -> " + stockValue.toString());
-
                 // Finally write it to our combiner 
 				context.write(stockKey, stockValue);
 			}
@@ -103,8 +101,6 @@ public class GroupStocks {
 			String stockName = key.toString().split(",")[0];
 			Text keyOut = new Text(stockName);
 			
-			System.out.println(keyOut.toString() + " -> " + valueOut.toString());
-
 			context.write(keyOut, valueOut);
 		}
 	}
