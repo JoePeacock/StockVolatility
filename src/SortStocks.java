@@ -1,8 +1,12 @@
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -46,7 +50,7 @@ public class SortStocks {
 			// Otherwise specify the top 10 and bottom 10.
 			if (sortedStocks.size() > 19) {
 
-				context.write(new Text("\nLowest 10 Volatility\n"), new DoubleWritable());
+				context.write(new Text("\nLowest 10 Volatility"), new DoubleWritable());
                 for (int i =0; i<10; i++) {
                 	double volatility = sortedStocks.firstEntry().getKey();
                     String stockName = sortedStocks.firstEntry().getValue();
@@ -56,7 +60,7 @@ public class SortStocks {
                     sortedStocks.remove(sortedStocks.firstEntry().getKey());
                 }
                 
-                context.write(new Text("\nHighest 10 Volatility\n"), new DoubleWritable());
+                context.write(new Text("\nHighest 10 Volatility"), new DoubleWritable());
                 for(int i =0; i<10; i++) {
                 	double volatility = sortedStocks.lastEntry().getKey();
                     String stockName = sortedStocks.lastEntry().getValue();
@@ -66,15 +70,10 @@ public class SortStocks {
                     sortedStocks.remove(sortedStocks.lastEntry().getKey());
                 }
 			} else {
-				context.write(new Text("\nAll Volatility's\n"), new DoubleWritable());
-                for (int i = 0; i< sortedStocks.size(); i++) {
-                	double volatility = sortedStocks.firstEntry().getKey();
-                    String stockName = sortedStocks.firstEntry().getValue();
-
-                    context.write(new Text(stockName), new DoubleWritable(volatility));
-                        
-                    sortedStocks.remove(sortedStocks.firstEntry().getKey());
-                }
+				context.write(new Text("\nAll Volatility's"), new DoubleWritable());
+				for(Double stockKey: sortedStocks.keySet()) {
+					context.write(new Text(sortedStocks.get(stockKey)), new DoubleWritable(stockKey));
+				}
 			}
 		}
 	}

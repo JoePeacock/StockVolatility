@@ -60,12 +60,12 @@ public class CalculateVolatility {
 
 			int numOfMonths = returnList.size();
 
-			DoubleWritable volatility = new DoubleWritable(calculateVolatility(returnList, numOfMonths));
-			Text stockName = key;
-			
-			// If the volatility is 0 just ignore it.
-			if (volatility.get() != 0) {
-				context.write(stockName, volatility);
+			if (numOfMonths > 1) {
+				DoubleWritable volatility = new DoubleWritable(calculateVolatility(returnList, numOfMonths));
+				Text stockName = key;
+				if (volatility.get() !=  0){
+					context.write(stockName, volatility);
+				}
 			}
 		}
 	}
