@@ -37,28 +37,44 @@ public class SortStocks {
 			
 			for (Text val: values) {
 				String[] stock = val.toString().split(",");
-				sortedStocks.put(Double.parseDouble(stock[0]), stock[1]);
+				sortedStocks.put(Double.parseDouble(stock[1]), stock[0]);
+				
+				System.out.println("Key: " + stock[0] + " Value: " + stock[1]);
 			}
 			
-			context.write(new Text("\nTop 10 Volatility\n"), new DoubleWritable());
+			// If we dont have 20 stocks to print, then just print them all. 
+			// Otherwise specify the top 10 and bottom 10.
+			if (sortedStocks.size() > 19) {
 
-			for (int i =0; i<10; i++) {
-				double volatility = sortedStocks.firstEntry().getKey();
-				String stockName = sortedStocks.firstEntry().getValue();
+				context.write(new Text("\nLowest 10 Volatility\n"), new DoubleWritable());
+                for (int i =0; i<10; i++) {
+                	double volatility = sortedStocks.firstEntry().getKey();
+                    String stockName = sortedStocks.firstEntry().getValue();
 
-				context.write(new Text(stockName), new DoubleWritable(volatility));
-				
-				sortedStocks.remove(sortedStocks.firstEntry());
-			}
-			
-			context.write(new Text("\nBottom 10 Volatility\n"), new DoubleWritable());
-			for(int i =0; i<10; i++) {
-				double volatility = sortedStocks.lastEntry().getKey();
-				String stockName = sortedStocks.lastEntry().getValue();
+                    context.write(new Text(stockName), new DoubleWritable(volatility));
+                        
+                    sortedStocks.remove(sortedStocks.firstEntry().getKey());
+                }
+                
+                context.write(new Text("\nHighest 10 Volatility\n"), new DoubleWritable());
+                for(int i =0; i<10; i++) {
+                	double volatility = sortedStocks.lastEntry().getKey();
+                    String stockName = sortedStocks.lastEntry().getValue();
 
-				context.write(new Text(stockName), new DoubleWritable(volatility));
-				
-				sortedStocks.remove(sortedStocks.lastEntry());
+                    context.write(new Text(stockName), new DoubleWritable(volatility));
+                        
+                    sortedStocks.remove(sortedStocks.lastEntry().getKey());
+                }
+			} else {
+				context.write(new Text("\nAll Volatility's\n"), new DoubleWritable());
+                for (int i = 0; i< sortedStocks.size(); i++) {
+                	double volatility = sortedStocks.firstEntry().getKey();
+                    String stockName = sortedStocks.firstEntry().getValue();
+
+                    context.write(new Text(stockName), new DoubleWritable(volatility));
+                        
+                    sortedStocks.remove(sortedStocks.firstEntry().getKey());
+                }
 			}
 		}
 	}

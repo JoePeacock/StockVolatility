@@ -1,5 +1,6 @@
 import java.util.Date;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -12,6 +13,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 public class Main {
 
 	public static void main(String[] args) throws Exception {
+
+		Configuration conf = new Configuration();
 
 		long start = new Date().getTime();		
 
@@ -29,7 +32,7 @@ public class Main {
 	    calculate.setJarByClass(CalculateVolatility.class);
 	    
 	    Job sort = Job.getInstance();
-	    calculate.setJarByClass(SortStocks.class);
+	    sort.setJarByClass(SortStocks.class);
 
 		System.out.println("\n=============== Stock Volatility - Start ===============\n");
 		
@@ -77,8 +80,8 @@ public class Main {
 		/*
 		 * Run Sort Job
 		 */
-		sort.setMapperClass(GroupStocks.Map.class);
-        sort.setReducerClass(GroupStocks.Reduce.class);
+		sort.setMapperClass(SortStocks.Map.class);
+        sort.setReducerClass(SortStocks.Reduce.class);
         
         sort.setOutputKeyClass(Text.class);
         sort.setOutputValueClass(DoubleWritable.class);
